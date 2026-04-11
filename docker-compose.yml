@@ -6,7 +6,7 @@ services:
       - "5000:5000"
     environment:
       FLASK_ENV: production
-      SECRET_KEY: ${SECRET_KEY}
+      SECRET_KEY: thisisasupersecretkey
       DATABASE_URL: postgresql://yohoot:password@db:5432/yohoot
       REDIS_URL: redis://redis:6379/0
     depends_on:
