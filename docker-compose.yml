@@ -20,7 +20,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: yohoot
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_PASSWORD: password
       POSTGRES_DB: yohoot
     volumes:
       - postgres_data:/var/lib/postgresql/data
