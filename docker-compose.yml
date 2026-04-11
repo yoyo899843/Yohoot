@@ -35,12 +35,5 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
-    depends_on:
-      - web
-    restart: unless-stopped
-
 volumes:
   postgres_data:
