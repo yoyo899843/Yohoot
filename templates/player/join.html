@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}加入競賽 — Yohoot{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div style="max-width:420px;margin:80px auto;text-align:center;">
+  <h1 style="color:white;font-size:48px;font-weight:900;margin-bottom:8px;">🎮 Yohoot</h1>
+  <p style="color:rgba(255,255,255,.7);margin-bottom:32px;">即時搶答競賽平台</p>
+
+  <div class="card">
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('player.join') }}">
+      <div class="form-group">
+        <label style="font-size:18px;font-weight:700;">房間代碼</label>
+        <input class="form-control" type="text" name="code"
+          placeholder="輸入 6 碼代碼"
+          value="{{ request.form.get('code', '') }}"
+          maxlength="6" autocomplete="off"
+          style="text-align:center;font-size:24px;font-weight:700;letter-spacing:4px;text-transform:uppercase;"
+          autofocus required>
+      </div>
+      <div class="form-group">
+        <label style="font-size:18px;font-weight:700;">你的暱稱</label>
+        <input class="form-control" type="text" name="nickname"
+          placeholder="輸入你的暱稱"
+          value="{{ request.form.get('nickname', '') }}"
+          maxlength="20"
+          style="text-align:center;font-size:20px;"
+          required>
+      </div>
+      <button class="btn btn-success btn-lg btn-block" type="submit">加入競賽</button>
+    </form>
+  </div>
+
+  <p style="color:rgba(255,255,255,.5);margin-top:24px;font-size:13px;">
+    主持人？<a href="{{ url_for('auth.login') }}" style="color:rgba(255,255,255,.8);">登入這裡</a>
+  </p>
+</div>
+{% endblock %}

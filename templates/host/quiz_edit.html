@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+{% block title %}{{ '編輯競賽' if quiz else '新增競賽' }} — Yohoot{% endblock %}
+
+{% block content %}
+<div style="margin:24px 0 16px;">
+  <a href="{{ url_for('host.dashboard') }}" style="color:rgba(255,255,255,.7);">← 返回</a>
+</div>
+
+<!-- Quiz Info Form -->
+<div class="card" id="quiz-info-card">
+  <h2 style="color:#46178f;margin-bottom:20px;">{{ '編輯競賽資訊' if quiz else '建立新競賽' }}</h2>
+  {% if not quiz %}
+  <form method="POST">
+    <div class="form-group">
+      <label>競賽名稱 *</label>
+      <input class="form-control" type="text" name="title" placeholder="例：期末複習大挑戰" required autofocus>
+    </div>
+    <div class="form-group">
+      <label>競賽說明（選填）</label>
+      <textarea class="form-control" name="description" rows="2" placeholder="簡短說明這場競賽的內容"></textarea>
+    </div>
+    <button class="btn btn-primary" type="submit">建立並新增題目 →</button>
+  </form>
+  {% else %}
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h3 style="margin:0;color:#333;">{{ quiz.title }}</h3>
+      {% if quiz.description %}<p style="color:#666;margin:4px 0 0;">{{ quiz.description }}</p>{% endif %}
+    </div>
+    <div style="display:flex;gap:8px;">
+      <span style="color:#666;font-size:14px;align-self:center;">{{ questions|length }} 道題目</span>
+      <form method="POST" action="{{ url_for('host.game_launch', quiz_id=quiz.id) }}">
+        <button class="btn btn-success" {% if not questions %}disabled{% endif %}>▶ 啟動競賽</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+{% if quiz %}
+<!-- Questions List -->
+<div id="questions-list">
+  {% for q in questions %}
+  <div class="card question-card" id="q-{{ q.id }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div style="flex:1;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+          <span class="q-badge">Q{{ loop.index }}</span>
+          <strong style="color:#333;font-size:16px;">{{ q.text }}</strong>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          {% for c in q.choices %}
+          <span class="choice-tag {{ 'correct' if c.is_correct else '' }}">
+            {{ c.text }}{% if c.is_correct %} ✓{% endif %}
+          </span>
+          {% endfor %}
+        </div>
+        <div style="margin-top:8px;color:#999;font-size:13px;">⏱ {{ q.time_limit }} 秒</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0;margin-left:16px;">
+        <button class="btn btn-info" style="padding:6px 12px;font-size:13px;"
+          onclick="openEditForm({{ q.to_dict(include_answer=true)|tojson }})">編輯</button>
+        <button class="btn btn-danger" style="padding:6px 12px;font-size:13px;"
+          onclick="deleteQuestion({{ q.id }}, this)">刪除</button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Add / Edit Question Form -->
+<div class="card" id="question-form-card" style="display:none;">
+  <h3 style="color:#46178f;margin-bottom:16px;" id="form-title">新增題目</h3>
+  <input type="hidden" id="editing-question-id" value="">
+
+  <div class="form-group">
+    <label>題目內容 *</label>
+    <textarea class="form-control" id="q-text" rows="2" placeholder="輸入題目內容..." required></textarea>
+  </div>
+  <div class="form-group">
+    <label>作答時限（秒）</label>
+    <input class="form-control" type="number" id="q-time" value="20" min="5" max="120" style="width:120px;">
+  </div>
+
+  <label style="display:block;margin-bottom:10px;font-weight:600;">選項（標記正確答案）</label>
+  <div id="choices-container">
+    {% for i in range(4) %}
+    <div class="choice-row" style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+      <input type="radio" name="correct-choice" value="{{ i }}" {% if i == 0 %}checked{% endif %}>
+      <input class="form-control choice-input" type="text" placeholder="選項 {{ ['A','B','C','D'][i] }}" style="flex:1;">
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="display:flex;gap:10px;margin-top:16px;">
+    <button class="btn btn-success" onclick="saveQuestion()">儲存題目</button>
+    <button class="btn" style="background:#ddd;color:#333;" onclick="closeForm()">取消</button>
+  </div>
+</div>
+
+<button class="btn btn-warning btn-block" style="margin-top:8px;" onclick="openAddForm()">＋ 新增題目</button>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const QUIZ_ID = {{ quiz.id if quiz else 'null' }};
+
+function openAddForm() {
+  document.getElementById('form-title').textContent = '新增題目';
+  document.getElementById('editing-question-id').value = '';
+  document.getElementById('q-text').value = '';
+  document.getElementById('q-time').value = 20;
+  document.querySelectorAll('.choice-input').forEach(i => i.value = '');
+  document.querySelector('input[name="correct-choice"][value="0"]').checked = true;
+  document.getElementById('question-form-card').style.display = 'block';
+  document.getElementById('q-text').focus();
+  document.getElementById('question-form-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function openEditForm(q) {
+  document.getElementById('form-title').textContent = '編輯題目';
+  document.getElementById('editing-question-id').value = q.id;
+  document.getElementById('q-text').value = q.text;
+  document.getElementById('q-time').value = q.time_limit;
+
+  const inputs = document.querySelectorAll('.choice-input');
+  const radios = document.querySelectorAll('input[name="correct-choice"]');
+  q.choices.forEach((c, i) => {
+    if (inputs[i]) inputs[i].value = c.text;
+    if (radios[i]) radios[i].checked = c.is_correct;
+  });
+
+  document.getElementById('question-form-card').style.display = 'block';
+  document.getElementById('question-form-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeForm() {
+  document.getElementById('question-form-card').style.display = 'none';
+}
+
+async function saveQuestion() {
+  const text = document.getElementById('q-text').value.trim();
+  if (!text) { alert('請填寫題目內容'); return; }
+
+  const timeLimit = parseInt(document.getElementById('q-time').value) || 20;
+  const correctIndex = parseInt(document.querySelector('input[name="correct-choice"]:checked').value);
+  const choiceInputs = document.querySelectorAll('.choice-input');
+
+  const choices = [];
+  let hasCorrect = false;
+  choiceInputs.forEach((inp, i) => {
+    const t = inp.value.trim();
+    if (t) {
+      choices.push({ text: t, is_correct: i === correctIndex });
+      if (i === correctIndex) hasCorrect = true;
+    }
+  });
+
+  if (choices.length < 2) { alert('請至少填寫兩個選項'); return; }
+  if (!hasCorrect) { alert('請選擇正確答案'); return; }
+
+  const editingId = document.getElementById('editing-question-id').value;
+  const payload = { text, time_limit: timeLimit, choices };
+
+  let url, method;
+  if (editingId) {
+    url = `/host/question/${editingId}`;
+    method = 'PUT';
+  } else {
+    url = `/host/quiz/${QUIZ_ID}/question`;
+    method = 'POST';
+  }
+
+  const res = await fetch(url, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (res.ok) {
+    location.reload();
+  } else {
+    const err = await res.json();
+    alert(err.error || '儲存失敗');
+  }
+}
+
+async function deleteQuestion(questionId, btn) {
+  if (!confirm('確定要刪除這道題目嗎？')) return;
+  const res = await fetch(`/host/question/${questionId}`, { method: 'DELETE' });
+  if (res.ok) {
+    document.getElementById(`q-${questionId}`).remove();
+  } else {
+    alert('刪除失敗');
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% block title %}控制台 · {{ session.quiz.title }} — Yohoot{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin:20px 0 16px;">
+  <h2 style="color:white;">{{ session.quiz.title }}</h2>
+  <span style="color:rgba(255,255,255,.7);font-size:14px;">{{ questions|length }} 道題目</span>
+</div>
+
+<!-- ── Lobby State ───────────────────────────────────────────────────── -->
+<div id="state-lobby">
+  <div class="card" style="text-align:center;padding:32px;">
+    <p style="color:#666;margin-bottom:8px;">玩家加入房間代碼</p>
+    <div class="room-code">{{ session.code }}</div>
+    <p style="color:#999;margin-top:8px;font-size:14px;">
+      前往 <strong>{{ request.host }}</strong> 輸入代碼
+    </p>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="color:#46178f;">等待中的玩家</h3>
+      <span class="player-count-badge" id="player-count-badge">0 人</span>
+    </div>
+    <div id="player-list" style="display:flex;flex-wrap:wrap;gap:8px;min-height:40px;">
+      <span style="color:#aaa;font-size:14px;">尚無玩家加入...</span>
+    </div>
+    <div style="margin-top:24px;">
+      <button class="btn btn-success btn-lg btn-block" id="btn-start"
+        onclick="startGame()" disabled>
+        ▶ 開始競賽
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Active: Between Questions ────────────────────────────────────── -->
+<div id="state-active-ready" style="display:none;">
+  <div class="card" style="text-align:center;padding:40px;">
+    <p id="between-q-label" style="font-size:20px;color:#666;margin-bottom:24px;">競賽已開始！</p>
+    <button class="btn btn-primary btn-lg" onclick="nextQuestion()">下一題 →</button>
+    &nbsp;
+    <button class="btn btn-danger" onclick="endGame()">結束競賽</button>
+  </div>
+</div>
+
+<!-- ── Active: Question Showing ─────────────────────────────────────── -->
+<div id="state-question-active" style="display:none;">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <span id="q-number-label" style="color:#46178f;font-weight:700;font-size:16px;"></span>
+      <div class="timer" id="host-timer" style="font-size:36px;color:#e21b3c;"></div>
+    </div>
+    <div class="question-text" id="host-q-text" style="text-align:left;font-size:20px;"></div>
+  </div>
+
+  <div id="host-choices" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;"></div>
+
+  <div class="card" style="display:flex;justify-content:space-between;align-items:center;">
+    <span id="answer-count" style="font-size:18px;color:#46178f;font-weight:700;">已作答：0 / 0</span>
+    <div>
+      <button class="btn btn-warning" onclick="endQuestion()">顯示結果</button>
+      &nbsp;
+      <button class="btn btn-danger" onclick="endGame()">結束競賽</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Question Results ───────────────────────────────────────────────── -->
+<div id="state-question-result" style="display:none;">
+  <div class="card">
+    <h3 style="color:#46178f;margin-bottom:16px;">作答分佈</h3>
+    <div id="result-bars"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="color:#46178f;margin-bottom:12px;">🏆 即時排行榜（前5名）</h3>
+    <div id="result-leaderboard"></div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-primary" onclick="nextQuestion()">下一題 →</button>
+      <button class="btn btn-danger" onclick="endGame()">結束競賽</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Game Ended ─────────────────────────────────────────────────────── -->
+<div id="state-game-ended" style="display:none;">
+  <div class="card" style="text-align:center;padding:32px;">
+    <h2 style="color:#46178f;margin-bottom:8px;">🎉 競賽結束！</h2>
+    <h3 style="color:#333;margin-bottom:24px;">最終排行榜</h3>
+    <div id="final-leaderboard"></div>
+    <div style="margin-top:24px;">
+      <a href="{{ url_for('host.dashboard') }}" class="btn btn-primary">返回主控台</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+const SESSION_ID = {{ session.id }};
+const TOTAL_QUESTIONS = {{ questions|length }};
+let totalPlayers = 0;
+let timerInterval = null;
+let currentTimeLimit = 20;
+
+const socket = io();
+
+socket.on('connect', () => {
+  socket.emit('host_join', { session_id: SESSION_ID });
+});
+
+socket.on('host_connected', (data) => {
+  totalPlayers = data.player_count;
+  updatePlayerList(data.players, data.player_count);
+});
+
+socket.on('player_joined', (data) => {
+  totalPlayers = data.player_count;
+  addPlayerToList(data.nickname, data.player_count);
+});
+
+socket.on('game_started', () => {
+  showState('active-ready');
+  document.getElementById('between-q-label').textContent = '競賽已開始，準備好第一題！';
+});
+
+socket.on('question_start_host', (data) => {
+  showState('question-active');
+  renderHostQuestion(data);
+});
+
+socket.on('answer_received', (data) => {
+  document.getElementById('answer-count').textContent =
+    `已作答：${data.answered} / ${data.total}`;
+});
+
+socket.on('question_ended', (data) => {
+  clearTimer();
+  showState('question-result');
+  renderQuestionResult(data);
+});
+
+socket.on('game_ended', (data) => {
+  clearTimer();
+  showState('game-ended');
+  renderFinalLeaderboard(data.leaderboard);
+});
+
+// ── Actions ──────────────────────────────────────────────────────────────
+
+function startGame() {
+  socket.emit('start_game', { session_id: SESSION_ID });
+}
+
+function nextQuestion() {
+  socket.emit('next_question', { session_id: SESSION_ID });
+}
+
+function endQuestion() {
+  socket.emit('end_question', { session_id: SESSION_ID });
+}
+
+function endGame() {
+  if (!confirm('確定要結束競賽嗎？')) return;
+  socket.emit('end_game', { session_id: SESSION_ID });
+}
+
+// ── UI Helpers ─────────────────────────────────────────────────────────
+
+function showState(state) {
+  ['lobby', 'active-ready', 'question-active', 'question-result', 'game-ended'].forEach(s => {
+    document.getElementById('state-' + s.replace('-', '-')).style.display = 'none';
+  });
+  // fix the ids
+  const map = {
+    'lobby': 'state-lobby',
+    'active-ready': 'state-active-ready',
+    'question-active': 'state-question-active',
+    'question-result': 'state-question-result',
+    'game-ended': 'state-game-ended',
+  };
+  if (map[state]) document.getElementById(map[state]).style.display = 'block';
+}
+
+function updatePlayerList(players, count) {
+  const list = document.getElementById('player-list');
+  const badge = document.getElementById('player-count-badge');
+  badge.textContent = count + ' 人';
+  list.innerHTML = players.length === 0
+    ? '<span style="color:#aaa;font-size:14px;">尚無玩家加入...</span>'
+    : players.map(n => `<span class="player-tag">${n}</span>`).join('');
+  document.getElementById('btn-start').disabled = count === 0;
+}
+
+function addPlayerToList(nickname, count) {
+  const list = document.getElementById('player-list');
+  const badge = document.getElementById('player-count-badge');
+  badge.textContent = count + ' 人';
+  const empty = list.querySelector('span[style]');
+  if (empty) list.innerHTML = '';
+  const tag = document.createElement('span');
+  tag.className = 'player-tag';
+  tag.textContent = nickname;
+  list.appendChild(tag);
+  document.getElementById('btn-start').disabled = false;
+}
+
+const CHOICE_COLORS = ['#e21b3c', '#1368ce', '#ffa602', '#26890d'];
+
+function renderHostQuestion(data) {
+  const q = data.question;
+  currentTimeLimit = q.time_limit;
+  document.getElementById('q-number-label').textContent =
+    `第 ${data.question_number} 題 / 共 ${data.total_questions} 題`;
+  document.getElementById('host-q-text').textContent = q.text;
+  document.getElementById('answer-count').textContent = `已作答：0 / ${totalPlayers}`;
+
+  const container = document.getElementById('host-choices');
+  container.innerHTML = q.choices.map((c, i) => `
+    <div style="background:${CHOICE_COLORS[i]};color:${i===2?'#333':'white'};
+      padding:16px;border-radius:10px;font-weight:700;font-size:16px;
+      ${c.is_correct ? 'border:3px solid white;box-shadow:0 0 12px rgba(255,255,255,.5);' : ''}">
+      ${c.is_correct ? '✓ ' : ''}${c.text}
+    </div>
+  `).join('');
+
+  startTimer(q.time_limit);
+}
+
+function renderQuestionResult(data) {
+  const bars = document.getElementById('result-bars');
+  const max = Math.max(...data.choices_stats.map(c => c.count), 1);
+  bars.innerHTML = data.choices_stats.map((c, i) => `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <div style="width:16px;height:16px;background:${CHOICE_COLORS[i]};border-radius:3px;flex-shrink:0;"></div>
+      <div style="flex:1;background:#eee;border-radius:6px;overflow:hidden;height:32px;">
+        <div style="width:${(c.count/max)*100}%;background:${CHOICE_COLORS[i]};height:100%;
+          display:flex;align-items:center;padding-left:8px;color:${i===2?'#333':'white'};font-weight:700;
+          min-width:${c.count>0?'40px':'0'};transition:width .5s;">
+          ${c.count > 0 ? c.count : ''}
+        </div>
+      </div>
+      <span style="font-size:14px;${c.is_correct?'font-weight:700;color:#26890d;':'color:#666'}">
+        ${c.is_correct ? '✓ ' : ''}${c.text}
+      </span>
+    </div>
+  `).join('');
+
+  renderLeaderboard('result-leaderboard', data.leaderboard);
+}
+
+function renderLeaderboard(containerId, leaderboard) {
+  const medals = ['🥇', '🥈', '🥉'];
+  document.getElementById(containerId).innerHTML = leaderboard.map((p, i) => `
+    <div class="leaderboard-item">
+      <span>${medals[i] || (i+1) + '.'} ${p.nickname}</span>
+      <strong>${p.score.toLocaleString()} 分</strong>
+    </div>
+  `).join('') || '<p style="color:#999;text-align:center;">還沒有人作答</p>';
+}
+
+function renderFinalLeaderboard(leaderboard) {
+  renderLeaderboard('final-leaderboard', leaderboard);
+}
+
+function startTimer(seconds) {
+  clearTimer();
+  let remaining = seconds;
+  const el = document.getElementById('host-timer');
+  el.textContent = remaining;
+  timerInterval = setInterval(() => {
+    remaining--;
+    el.textContent = remaining;
+    el.style.color = remaining <= 5 ? '#e21b3c' : '#333';
+    if (remaining <= 0) clearTimer();
+  }, 1000);
+}
+
+function clearTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+</script>
+{% endblock %}

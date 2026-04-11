@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}競賽結果 — Yohoot{% endblock %}
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div style="max-width:500px;margin:60px auto;text-align:center;">
+  <h1 style="color:white;font-size:40px;font-weight:900;margin-bottom:4px;">🎊 競賽結束</h1>
+  <p style="color:rgba(255,255,255,.7);margin-bottom:24px;">{{ game_session.quiz.title }}</p>
+
+  <div class="card" style="padding:32px;">
+    <h3 style="color:#46178f;margin-bottom:20px;">最終排行榜</h3>
+
+    {% set medals = ['🥇', '🥈', '🥉'] %}
+    {% for player in players %}
+    <div class="leaderboard-item" style="
+      {% if loop.index == 1 %}background:#ffd700;color:#333;{% endif %}
+      {% if loop.index == 2 %}background:#c0c0c0;color:#333;{% endif %}
+      {% if loop.index == 3 %}background:#cd7f32;color:#333;{% endif %}
+      {% if loop.index > 3 %}background:rgba(255,255,255,.1);{% endif %}
+    ">
+      <span>
+        {% if loop.index <= 3 %}{{ medals[loop.index - 1] }}{% else %}{{ loop.index }}.{% endif %}
+        {{ player.nickname }}
+      </span>
+      <strong>{{ "{:,}".format(player.score) }} 分</strong>
+    </div>
+    {% else %}
+    <p style="color:#999;">尚無玩家資料</p>
+    {% endfor %}
+
+    <div style="margin-top:32px;">
+      <a href="/" class="btn btn-primary">再玩一場</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

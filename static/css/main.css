@@ -1,0 +1,172 @@
+/* ── Reset ──────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Base ───────────────────────────────────────────────────────────── */
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #46178f;
+  color: #333;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 20px 16px;
+}
+
+/* ── Navbar ─────────────────────────────────────────────────────────── */
+.navbar {
+  background: #350d70;
+  padding: 14px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.navbar a { color: white; text-decoration: none; font-weight: 600; }
+.navbar a:hover { opacity: .8; }
+.navbar .brand { font-size: 22px; font-weight: 900; }
+
+/* ── Card ───────────────────────────────────────────────────────────── */
+.card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-block;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform .1s, opacity .1s;
+  line-height: 1.4;
+}
+.btn:hover:not(:disabled) { transform: scale(1.03); }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.btn-primary  { background: #46178f; color: white; }
+.btn-success  { background: #26890d; color: white; }
+.btn-danger   { background: #e21b3c; color: white; }
+.btn-warning  { background: #ffa602; color: #333; }
+.btn-info     { background: #1368ce; color: white; }
+
+.btn-lg    { padding: 14px 32px; font-size: 18px; }
+.btn-block { display: block; width: 100%; text-align: center; }
+
+/* ── Forms ──────────────────────────────────────────────────────────── */
+.form-group { margin-bottom: 16px; }
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #444;
+}
+.form-control {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: border-color .2s;
+}
+.form-control:focus {
+  outline: none;
+  border-color: #46178f;
+}
+textarea.form-control { resize: vertical; }
+
+/* ── Alerts ─────────────────────────────────────────────────────────── */
+.alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+.alert-error   { background: #fef2f2; border: 1px solid #e21b3c; color: #c00; }
+.alert-success { background: #f0fdf4; border: 1px solid #26890d; color: #166534; }
+
+/* ── Quiz Grid ──────────────────────────────────────────────────────── */
+.quiz-grid { display: grid; gap: 12px; }
+.quiz-card { transition: transform .15s; }
+.quiz-card:hover { transform: translateY(-2px); }
+
+/* ── Question cards ─────────────────────────────────────────────────── */
+.q-badge {
+  background: #46178f;
+  color: white;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.choice-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #eee;
+  font-size: 13px;
+  color: #555;
+}
+.choice-tag.correct {
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 700;
+}
+
+/* ── Game UI ────────────────────────────────────────────────────────── */
+.room-code {
+  font-size: 64px;
+  font-weight: 900;
+  letter-spacing: 8px;
+  color: #46178f;
+  text-align: center;
+  padding: 8px;
+}
+.timer {
+  font-size: 48px;
+  font-weight: 900;
+  text-align: center;
+}
+.question-text {
+  font-size: 22px;
+  font-weight: 700;
+  padding: 8px 0;
+  line-height: 1.4;
+}
+.leaderboard-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(70, 23, 143, .08);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+.player-tag {
+  display: inline-block;
+  background: #46178f;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.player-count-badge {
+  background: #46178f;
+  color: white;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+}

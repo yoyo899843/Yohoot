@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ player.nickname }} — Yohoot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+  <div class="container" style="max-width:500px;padding-top:40px;">
+
+    <!-- ── Waiting for game to start ───────────────────────────────── -->
+    <div id="state-waiting" style="text-align:center;">
+      <div class="card" style="padding:40px;">
+        <div style="font-size:64px;margin-bottom:16px;">⏳</div>
+        <h2 style="color:#46178f;margin-bottom:8px;">等待開始</h2>
+        <p style="color:#666;">主持人將很快開始競賽</p>
+        <div style="margin-top:24px;padding:16px;background:#f5f0ff;border-radius:8px;">
+          <div style="font-size:13px;color:#999;">你的暱稱</div>
+          <div style="font-size:24px;font-weight:700;color:#46178f;">{{ player.nickname }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Ready: game started, waiting for question ────────────────── -->
+    <div id="state-ready" style="display:none;text-align:center;">
+      <div class="card" style="padding:40px;">
+        <div style="font-size:64px;margin-bottom:16px;">🚀</div>
+        <h2 style="color:#46178f;">競賽開始！</h2>
+        <p style="color:#666;">等待第一題...</p>
+      </div>
+    </div>
+
+    <!-- ── Question ─────────────────────────────────────────────────── -->
+    <div id="state-question" style="display:none;">
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span id="p-q-number" style="color:#46178f;font-weight:700;font-size:14px;"></span>
+          <div class="timer" id="p-timer" style="font-size:40px;color:#e21b3c;font-weight:900;"></div>
+        </div>
+        <div class="question-text" id="p-q-text"></div>
+      </div>
+      <div id="p-choices"></div>
+    </div>
+
+    <!-- ── Answer submitted ─────────────────────────────────────────── -->
+    <div id="state-answered" style="display:none;text-align:center;">
+      <div class="card" style="padding:40px;">
+        <div style="font-size:64px;margin-bottom:16px;">✅</div>
+        <h2 style="color:#26890d;">已送出！</h2>
+        <p style="color:#666;">等待其他玩家作答...</p>
+      </div>
+    </div>
+
+    <!-- ── Question result ───────────────────────────────────────────── -->
+    <div id="state-q-result" style="display:none;text-align:center;">
+      <div class="card" style="padding:32px;">
+        <div id="result-icon" style="font-size:72px;margin-bottom:12px;"></div>
+        <h2 id="result-text" style="margin-bottom:8px;"></h2>
+        <div id="result-points" style="font-size:18px;color:#666;"></div>
+      </div>
+      <div class="card">
+        <h3 style="color:#46178f;margin-bottom:12px;">🏆 即時排行</h3>
+        <div id="p-leaderboard"></div>
+      </div>
+    </div>
+
+    <!-- ── Game ended ─────────────────────────────────────────────────── -->
+    <div id="state-ended" style="display:none;text-align:center;">
+      <div class="card" style="padding:40px;">
+        <div style="font-size:64px;margin-bottom:16px;">🎉</div>
+        <h2 style="color:#46178f;margin-bottom:8px;">競賽結束！</h2>
+        <div id="p-final-leaderboard" style="margin-top:16px;"></div>
+        <div style="margin-top:24px;">
+          <a href="/" class="btn btn-primary">返回首頁</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const CODE = "{{ game_session.code }}";
+    const PLAYER_ID = {{ player.id }};
+
+    let questionStartTime = null;
+    let timerInterval = null;
+    let myChoiceId = null;
+    let lastPointsEarned = 0;
+
+    const CHOICE_COLORS = ['#e21b3c', '#1368ce', '#ffa602', '#26890d'];
+    const CHOICE_TEXT_COLORS = ['white', 'white', '#333', 'white'];
+
+    const socket = io();
+
+    socket.on('connect', () => {
+      socket.emit('player_join', { code: CODE, player_id: PLAYER_ID });
+    });
+
+    socket.on('game_started', () => {
+      showState('ready');
+    });
+
+    socket.on('question_start', (data) => {
+      myChoiceId = null;
+      lastPointsEarned = 0;
+      showState('question');
+      renderQuestion(data);
+    });
+
+    socket.on('answer_confirmed', (data) => {
+      lastPointsEarned = data.points;
+      clearTimer();
+      showState('answered');
+    });
+
+    socket.on('question_ended', (data) => {
+      clearTimer();
+      showState('q-result');
+      renderQuestionResult(data);
+    });
+
+    socket.on('game_ended', (data) => {
+      clearTimer();
+      showState('ended');
+      renderFinalLeaderboard(data.leaderboard);
+    });
+
+    function showState(state) {
+      ['waiting', 'ready', 'question', 'answered', 'q-result', 'ended'].forEach(s => {
+        const el = document.getElementById('state-' + s);
+        if (el) el.style.display = 'none';
+      });
+      const el = document.getElementById('state-' + state);
+      if (el) el.style.display = 'block';
+    }
+
+    function renderQuestion(data) {
+      const q = data.question;
+      document.getElementById('p-q-number').textContent =
+        `第 ${data.question_number} 題 / 共 ${data.total_questions} 題`;
+      document.getElementById('p-q-text').textContent = q.text;
+
+      const container = document.getElementById('p-choices');
+      container.innerHTML = q.choices.map((c, i) => `
+        <button class="choice-btn-player"
+          id="choice-${c.id}"
+          style="display:block;width:100%;padding:20px;margin-bottom:10px;
+            background:${CHOICE_COLORS[i]};color:${CHOICE_TEXT_COLORS[i]};
+            border:none;border-radius:12px;font-size:18px;font-weight:700;cursor:pointer;"
+          onclick="submitAnswer(${c.id}, this)">
+          ${c.text}
+        </button>
+      `).join('');
+
+      questionStartTime = Date.now();
+      startTimer(q.time_limit);
+    }
+
+    function submitAnswer(choiceId, btn) {
+      if (myChoiceId !== null) return;
+      myChoiceId = choiceId;
+      const responseTime = Date.now() - questionStartTime;
+      socket.emit('submit_answer', {
+        player_id: PLAYER_ID,
+        choice_id: choiceId,
+        response_time_ms: responseTime,
+      });
+      // Visual feedback
+      document.querySelectorAll('.choice-btn-player').forEach(b => {
+        b.disabled = true;
+        b.style.opacity = b === btn ? '1' : '0.4';
+      });
+      if (btn) btn.style.border = '3px solid white';
+    }
+
+    function renderQuestionResult(data) {
+      const isCorrect = myChoiceId === data.correct_choice_id;
+      document.getElementById('result-icon').textContent = isCorrect ? '🎉' : '😢';
+      document.getElementById('result-text').textContent = isCorrect ? '答對了！' : '答錯了';
+      document.getElementById('result-text').style.color = isCorrect ? '#26890d' : '#e21b3c';
+      document.getElementById('result-points').textContent =
+        isCorrect ? `+${lastPointsEarned} 分` : '';
+
+      renderLeaderboard('p-leaderboard', data.leaderboard);
+    }
+
+    function renderFinalLeaderboard(leaderboard) {
+      renderLeaderboard('p-final-leaderboard', leaderboard);
+    }
+
+    function renderLeaderboard(containerId, leaderboard) {
+      const medals = ['🥇', '🥈', '🥉'];
+      document.getElementById(containerId).innerHTML = leaderboard.map((p, i) => `
+        <div class="leaderboard-item" style="${i < 3 ? '' : ''}">
+          <span>${medals[i] || (i+1) + '.'} ${p.nickname}</span>
+          <strong>${p.score.toLocaleString()} 分</strong>
+        </div>
+      `).join('') || '<p style="color:#999;">尚無排名</p>';
+    }
+
+    function startTimer(seconds) {
+      clearTimer();
+      let remaining = seconds;
+      const el = document.getElementById('p-timer');
+      el.textContent = remaining;
+      timerInterval = setInterval(() => {
+        remaining--;
+        el.textContent = remaining;
+        el.style.color = remaining <= 5 ? '#e21b3c' : '#333';
+        if (remaining <= 0) {
+          clearTimer();
+          // Auto-submit null if no answer
+          if (myChoiceId === null) {
+            myChoiceId = -1; // sentinel to prevent re-submit
+            socket.emit('submit_answer', {
+              player_id: PLAYER_ID,
+              choice_id: null,
+              response_time_ms: seconds * 1000,
+            });
+          }
+        }
+      }, 1000);
+    }
+
+    function clearTimer() {
+      if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+  </script>
+</body>
+</html>

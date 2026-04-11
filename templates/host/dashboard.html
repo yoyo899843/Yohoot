@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}我的競賽 — Yohoot{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin:32px 0 20px;">
+  <h1 style="color:white;">我的競賽</h1>
+  <a href="{{ url_for('host.quiz_new') }}" class="btn btn-warning">＋ 建立新競賽</a>
+</div>
+
+{% if quizzes %}
+  <div class="quiz-grid">
+    {% for quiz in quizzes %}
+    <div class="card quiz-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <h3 style="color:#46178f;margin-bottom:6px;">{{ quiz.title }}</h3>
+          {% if quiz.description %}
+            <p style="color:#666;font-size:14px;margin-bottom:8px;">{{ quiz.description }}</p>
+          {% endif %}
+          <span style="color:#999;font-size:13px;">
+            {{ quiz.questions.count() }} 道題目 ·
+            {{ quiz.created_at.strftime('%Y/%m/%d') }}
+          </span>
+        </div>
+        <div style="display:flex;gap:8px;flex-shrink:0;margin-left:16px;">
+          <a href="{{ url_for('host.quiz_edit', quiz_id=quiz.id) }}" class="btn btn-info" style="padding:8px 14px;font-size:14px;">編輯</a>
+          <form method="POST" action="{{ url_for('host.game_launch', quiz_id=quiz.id) }}" style="display:inline;">
+            <button class="btn btn-success" style="padding:8px 14px;font-size:14px;"
+              {% if quiz.questions.count() == 0 %}disabled title="請先新增題目"{% endif %}>
+              ▶ 啟動
+            </button>
+          </form>
+          <form method="POST" action="{{ url_for('host.quiz_delete', quiz_id=quiz.id) }}"
+                onsubmit="return confirm('確定要刪除「{{ quiz.title }}」嗎？')" style="display:inline;">
+            <button class="btn btn-danger" style="padding:8px 14px;font-size:14px;">刪除</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card" style="text-align:center;padding:48px;">
+    <p style="font-size:18px;color:#666;margin-bottom:20px;">還沒有競賽，立即建立第一個！</p>
+    <a href="{{ url_for('host.quiz_new') }}" class="btn btn-primary btn-lg">建立競賽</a>
+  </div>
+{% endif %}
+{% endblock %}
