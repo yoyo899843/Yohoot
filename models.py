@@ -45,7 +45,7 @@ class Quiz(db.Model):
         'Question', backref='quiz', lazy='dynamic',
         order_by='Question.order', cascade='all, delete-orphan'
     )
-    sessions = db.relationship('GameSession', backref='quiz', lazy='dynamic')
+    sessions = db.relationship('GameSession', backref='quiz', lazy='dynamic', cascade='all, delete-orphan')
 
 
 class Question(db.Model):
