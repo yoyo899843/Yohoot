@@ -47,7 +47,7 @@
     <div id="state-answered" style="display:none;text-align:center;">
       <div class="card" style="padding:40px;">
         <div style="font-size:64px;margin-bottom:16px;">✅</div>
-        <h2 style="color:#26890d;">已送出！</h2>
+        <h2 style="color:#26890d;" id="waiting-msg"></h2>
         <p style="color:#666;">等待其他玩家作答...</p>
       </div>
     </div>
@@ -89,6 +89,20 @@
     let myChoiceId = null;
     let lastPointsEarned = 0;
 
+    const WAITING_MSGS = [
+      '你好像很聰明喔！',
+      '等等就知道了...',
+      '手速很快膩！',
+      '坐好，等一下！',
+      '其他人還在想...',
+      '沉住氣！',
+      '你是最快的嗎？',
+      '謎底即將揭曉...',
+      '別緊張，反正選了就選了',
+      '別奧腦了，對了就對了！',
+      '答對了嗎？自己心裡有數吧！',
+    ];
+
     const CHOICE_COLORS = ['#e21b3c', '#1368ce', '#ffa602', '#26890d'];
     const CHOICE_TEXT_COLORS = ['white', 'white', '#333', 'white'];
 
@@ -112,6 +126,8 @@
     socket.on('answer_confirmed', (data) => {
       lastPointsEarned = data.points;
       clearTimer();
+      const msg = WAITING_MSGS[Math.floor(Math.random() * WAITING_MSGS.length)];
+      document.getElementById('waiting-msg').textContent = msg;
       showState('answered');
     });
 
