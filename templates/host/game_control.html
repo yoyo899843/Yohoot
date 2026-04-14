@@ -220,9 +220,8 @@ function renderHostQuestion(data) {
   const container = document.getElementById('host-choices');
   container.innerHTML = q.choices.map((c, i) => `
     <div style="background:${CHOICE_COLORS[i]};color:${i===2?'#333':'white'};
-      padding:16px;border-radius:10px;font-weight:700;font-size:16px;
-      ${c.is_correct ? 'border:3px solid white;box-shadow:0 0 12px rgba(255,255,255,.5);' : ''}">
-      ${c.is_correct ? '✓ ' : ''}${c.text}
+      padding:16px;border-radius:10px;font-weight:700;font-size:16px;">
+      ${c.text}
     </div>
   `).join('');
 
