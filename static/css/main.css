@@ -170,3 +170,18 @@ textarea.form-control { resize: vertical; }
   border-radius: 20px;
   font-weight: 700;
 }
+
+/* ── Footer ─────────────────────────────────────────────────────────── */
+footer {
+  background: #350d70;
+  margin-top: 40px;
+}
+.footer {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  text-align: center;
+  color: rgba(255, 255, 255, .55);
+  font-size: 13px;
+  line-height: 1.8;
+}
