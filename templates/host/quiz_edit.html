@@ -59,7 +59,7 @@
       </div>
       <div style="display:flex;gap:8px;flex-shrink:0;margin-left:16px;">
         <button class="btn btn-info" style="padding:6px 12px;font-size:13px;"
-          onclick="openEditForm({{ q.to_dict(include_answer=true)|tojson }})">編輯</button>
+          onclick='openEditForm({{ q.to_dict(include_answer=true)|tojson }})'>編輯</button>
         <button class="btn btn-danger" style="padding:6px 12px;font-size:13px;"
           onclick="deleteQuestion({{ q.id }}, this)">刪除</button>
       </div>

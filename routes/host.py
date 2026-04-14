@@ -34,7 +34,7 @@ def quiz_new():
     return render_template('host/quiz_edit.html', quiz=None, questions=[])
 
 
-@host_bp.route('/quiz/<int:quiz_id>/edit')
+@host_bp.route('/quiz/<int:quiz_id>/edit', methods=['GET', 'POST', 'PUT'])
 @login_required
 def quiz_edit(quiz_id):
     quiz = Quiz.query.filter_by(id=quiz_id, host_id=current_user.id).first_or_404()
