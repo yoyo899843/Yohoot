@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from extensions import db
@@ -18,6 +20,9 @@ def join():
 
     if not code or not nickname:
         return render_template('player/join.html', error='請填寫房間代碼和暱稱')
+
+    if not re.match(r'^[\w\s\-_.]{1,20}$', nickname):
+        return render_template('player/join.html', error='暱稱只能包含中英文、數字、空格及 - _ . 符號，且不超過 20 字')
 
     game_session = GameSession.query.filter_by(code=code, status='waiting').first()
     if not game_session:
@@ -58,4 +63,5 @@ def lobby(code):
 def result(code):
     game_session = GameSession.query.filter_by(code=code).first_or_404()
     players = game_session.players.order_by(Player.score.desc()).all()
+    players
     return render_template('player/result.html', game_session=game_session, players=players)
