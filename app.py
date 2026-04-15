@@ -23,6 +23,16 @@ def create_app(config_name=None):
         async_mode='eventlet',
     )
 
+    @app.after_request
+    def add_security_headers(response):
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "connect-src 'self' ws: wss:;"           # 允許 WebSocket 連線
+        )
+        return response
+
     from routes.auth import auth_bp
     from routes.host import host_bp
     from routes.player import player_bp
