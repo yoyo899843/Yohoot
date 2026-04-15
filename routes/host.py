@@ -68,6 +68,7 @@ def question_add(quiz_id):
         time_limit=int(data.get('time_limit', 20)),
         order=count,
     )
+
     db.session.add(question)
     db.session.flush()
 

@@ -103,6 +103,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
 <script>
 const QUIZ_ID = {{ quiz.id if quiz else 'null' }};
 
@@ -142,7 +143,13 @@ function closeForm() {
 }
 
 async function saveQuestion() {
-  const text = document.getElementById('q-text').value.trim();
+  const config = {
+    ADD_TAGS: ['iframe'],
+    ADD_TAGS: ['img'],
+    ADD_ATTR: ['src'],
+  };
+  const origin_text = document.getElementById('q-text').value.trim();
+  const text = DOMPurify.sanitize(origin_text, config)
   if (!text) { alert('請填寫題目內容'); return; }
 
   const timeLimit = parseInt(document.getElementById('q-time').value) || 20;
@@ -197,5 +204,6 @@ async function deleteQuestion(questionId, btn) {
     alert('刪除失敗');
   }
 }
+</script>
 </script>
 {% endblock %}
